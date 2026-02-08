@@ -1,0 +1,316 @@
+---
+title: "Clase 02"
+author: "jorge ruiz (york)"
+date: "02/06/2026"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+### Análisis del Problema
+El set de datos Titanic se considera una ejemplo básico y de consulta general para los estudiantes que desarrollan conocimientos en el área de estadísticas y principios del lenguaje R, sirve para la creación de totoriales en minería de datos y demostraciones de exploración y clasificación de modelos predictivos.
+
+El set de datos está orientado a la predicción de sobrevivientes en la tragedia del hundimiento del **Transatlántico RMS Titanic**, entre la noche y madruga del 14 y 15 de abril de 1912, en la cual perdieron la vida 1496 personas de las 2208 que iban abordo del navío.
+
+Para mayor detalle revisar el siguiente enlace: https://es.wikipedia.org/wiki/RMS_Titanic
+
+Finalmente este conjunto de datos solo contiene las observaciones relacionadas con los pasajeros y no incluye datos de la tripulación.
+
+
+### Descripción de los datos.
+**Titanic Disaster Dataset** contiene 1309 observaciones sobre 14 variables, existen datos faltantes y para el estudio se descartaran variables.
+
+  Variable        | Descripción                                | Tipo      | Longitud | Dominio
+  ----------------|--------------------------------------------|-----------|----------|-------------------
+  **pclass**      | Clase social-ecónomica de viaje            | entero    | 01       | 1 a 3
+  **survived**    | Sobreviviente                              | entero    | 01       | 0 a 1
+  **name**        | Nombre del pasajero                        | cadena    | 45       | texto Continuo
+  **sex**         | Sexo del pasajero                          | cadena    | 06       | male o female
+  **age**         | Edad del pasajero                          | flotante  | 07       | 0.17 a 80
+  **sibsp**       | # hermanos o conyuges que viajan juntos    | entero    | 01       | 0 a 8
+  **parch**       | # de hijos que viajan con algún padre      | entero    | 01       | 0 a 9
+  **ticket**      | # de tiquete                               | cadena    | 09       | texto continuo
+  **fare**        | Tarifa pagada                              | flotante  | 08       | 0 a 512.3292
+  **cabin**       | Cabina o cuarto asignado                   | cadena    | 10       | texto continuo
+  **embarked**    | Puerto de embarque del pasajero            | char      | 01       | ' ', C, Q, S
+  **boat**        | # de bote solo si sobrevivió el pasajero   | entero    | 01       | 1 a 3
+  **body**        | # de cuerpo si no sobrevivió y se encontró | entero    | 01       | 1 a 3
+  **home.dest**   | Origen y destino del pasajero              | cadena    | 25       | múltiples valores
+
+
+```{r Librerías de uso}
+library('readxl')
+library('ggplot2')
+library('caTools')
+```
+
+```{r carga y prepara datos}
+# Concatena la ruta actual del proyecto R con la carpeta de datos locales
+ruta = paste0(getwd() , '/data')
+
+# establece ruta de los datos
+setwd(ruta)
+
+# carga de datos desde el archivo fuente
+dat.Originales <- read_excel('titanic3.xlsx', sheet = 1, col_names = TRUE)
+
+# elimina los datos no significativos para estudios.
+datos <- dat.Originales[c(1,2,4:7,11)]
+
+# exploración rápida de los datos
+head(datos, n=30)
+
+# asigna a los campos faltantes un valor de cero,
+# cualquiera de las siguientes 3 instrucciones hacen lo mismo
+datos$age[is.na(datos$age)] <- median(datos$age, na.rm = TRUE)
+datos[is.na(datos["age"]), "age"] <- median(datos$age, na.rm = TRUE)
+datos[is.na(datos[, 4]), 4] <- median(datos$age, na.rm = TRUE)
+
+# crea el intervalo de años para definir la clasificación de la observacion por rangos de edad
+niveles <- c(-Inf, 15, 25, 35, 45, 55, 65, 75, Inf)
+
+# crea las etiquetas para la clasificacion de edad por rangos
+etiquetas <- c("0 - 15","16 - 25", "26 - 35", "36 - 45", "46 - 55", '56 - 65', '66 - 75', '76 - 85')
+
+# crea una nueva columna llamada Fac_Edad, basada en el campo age, aplicando los 
+# niveles y asignando las etiquetas.
+datos$Fac_Edad = cut(datos$age, niveles, etiquetas)
+
+# crea los factores sobre las variables de las observaciones
+datos$pclass   <- factor(datos$pclass)
+datos$survived <- factor(datos$survived)
+datos$sex      <- factor(datos$sex)
+datos$embarked <- factor(datos$embarked)
+datos$Fac_Edad <- factor(datos$Fac_Edad)
+
+# imprime como tabla la estructura del set de datos
+table(str(datos));
+```
+
+### Análisis de datos.
+#### Medidas de tendencia.
+```{r}
+# calculando la media de la edad
+media <- mean(datos$age, na.rm = TRUE)
+
+# calculando la mediana de la edad
+mediana <- median(datos$age, na.rm = TRUE)
+
+# calculando la varianza
+varianza = var(datos$age, na.rm = TRUE)
+
+# calculando la desviación estandar
+desviacion <- sd(datos$age, na.rm = TRUE)
+
+# calcualando los cuartiles
+cuartil <- IQR(datos$age, na.rm = TRUE)
+
+# imprimiendo valores
+cat('La edad promedio es........: ' , media , '\n')
+cat('La edad mas reperitda es...: ' , mediana, '\n')
+cat('La varianza de la edad es..: ' , varianza, '\n')
+cat('La desviación estandar es..: ' , desviacion, '\n')
+cat('El valor del cuartil es....: ' , cuartil, '\n')
+
+```
+
+
+#### Distribución de observaciónes por el rango de edades.
+```{r}
+# usando histogramas para representar la distribución de un variable numérica
+table(datos$Fac_Edad)
+hist(x = datos$age, 
+     main = "Distribución por rangos de edades.", 
+     xlab = 'Rango edad', 
+     ylab = 'Frecuencia', 
+     col = rainbow(16))
+
+
+hist(x = datos$age, 
+     main = "Distribución por rangos de edades.", 
+     xlab = 'Rango edad', 
+     ylab = 'Frecuencia',
+     freq = FALSE)
+curve(dnorm(x,mean = mean(datos$age),sd=sd(datos$age)), add=TRUE, col='red')
+
+```
+
+#### Distribución de observaciónes por la varaible de supervivencia.
+```{r}
+table(datos$survived)
+barplot(table(datos$survived), main = "Distribución de Pasajeros",
+        ylab = 'Obervaciones',xlab = 'Muertos (0)    Sobrevivientes (1)',
+        col = c('red','yellow'))
+```
+
+#### Relación de la tasa de supervivencia de acuerdo al sexo.
+```{r}
+plot(x= datos$survived, y = datos$sex,  
+     main = "Relación Supervivencia - Genero del Pasajero.", 
+     xlab = 'Muertos (0)    Sobrevivientes (1)', 
+     ylab = 'Genero', col = rainbow(3))
+
+```
+
+#### Relación de la tasa de supervivientes de acuerdo a la edad.
+```{r}
+boxplot(datos$age ~ datos$survived,
+        main = 'Distribución por Edad',
+        xlab = 'Muertos (0)    Sobrevivientes (1)',
+        ylab = 'Edad Promedio',
+        col = c('red','yellow'))
+```
+
+#### Relación de la tasa de supervivientes de acuerdo a la clase social.
+```{r}
+mosaicplot(~datos$survived + datos$pclass,
+           main = 'Distribución de pasajeros por clase',
+           xlab = 'Muertos (0)   Sobrevivientes (1)',
+           ylab = 'Clases',
+           col = c('yellow','lightblue', 'green'))
+
+```
+#### Relación de la tasa de supervivientes de acuerdo a la clase social usando ggplot2.
+```{r}
+ggplot(datos, aes(x = pclass, fill = survived)) + 
+  geom_bar(position = "fill") +
+  labs(y = "Proporción", title = "Supervivencia por Clase")
+```
+
+#### Generando modelo predictivo para determinar si un pasajero puede sobrevivir o no al naufragio del RMS Titanic.
+```{r Creando modelo predictivo}
+# genera aleatoriedad en la selección de datos
+set.seed(1024)
+
+# genera los segmentos de entrenamiento y prueba sobre los datos titanic
+splt <- sample.split(datos$survived, SplitRatio = 0.7)
+
+datatrain <- datos[splt,]
+datatest  <- datos[!splt,]
+
+
+# Genera una tabla para demostrar la relación existente entre los datos de entrenamiento del 70% y 
+# los datos de prueba del 30% con respecto a la variable de proyección
+
+# Imprime las dimensiones o longitudes de ambos datasets
+dim(datatrain)
+dim(datatest)
+
+# Imprime la proporción de la variable objetivo para el dataset de entrenamiento
+prop.table(table(datatrain$survived))
+
+# Imprime la proporción de la variable objetivo para el dataset de entrenamiento
+prop.table(table(datatest$survived))
+
+
+# Creación del modelo de regresión logística, se usa con variables categóricas y
+# no valores numéricos continuos
+modelo <- glm(survived ~  pclass + sex +  age , 
+                 family = 'binomial',
+                 data = datatrain)
+
+#Imprime resumen
+summary(modelo)
+
+# Usando el modelo genera variable con nivel de probabilidad
+datatest$posiMorir <- predict(modelo, newdata = datatest, type = 'response')
+
+# modelo ingenuo predice el valor más probable
+# la mayor parte de las observaciones arrojan valor 0 o sea existe mayor probabilidad de morir
+table(datatest$survived)
+mdlPred <- rep(0,nrow(datatest))
+
+# resultado del modelo ingenuo o de regresión logistica, para calcular el nivel de sensibilidad, especificidad y exactitud
+cat('Distribución de observaciones, aplicando el modelo ingenuo\n');
+table(datatest$survived, mdlPred)
+cat('\n\n')
+
+# imprime la matriz de confusion
+cat('Matriz de confusión\n')
+table(datatest$survived,datatest$posiMorir >= 0.5)
+
+# crea la matriz de confusion en variable local
+#mc <- matrix(table(datatest$survived,datatest$posiMorir >= 0.5),nrow = 2)
+mc <- table(Real = datatest$survived, Predicho = datatest$posiMorir >= 0.5)
+print(mc)
+
+# calcula la presicion global del proyecto
+cat('\n\n');
+cat('Presición Gobal\t\t\tValor\t\t%\n')
+
+pg_sumdg <- (mc[1,1]+mc[2,2])
+pg_porce <- (100/nrow(datatest))*pg_sumdg
+
+cat('Observaciones\t\t\t',nrow(datatest),'\t\t',100,'\n')
+cat('Suma diagonales\t\t\t',pg_sumdg,'\t\t',pg_porce)
+
+
+# calcula la presicion positiva del si
+cat('\n\n');
+cat('Presición Positiva del Sí\tValor\t\t%\n')
+
+ps_totalsi <- (mc[2,1]+mc[2,2])
+ps_solosi  <- mc[2,2]
+ps_nocsi   <- mc[2,1]
+ps_factor  <- 100/ps_totalsi
+
+cat('Observaciones\t\t\t',ps_totalsi,'\t\t',100,'\n')
+cat('Si esperando un si\t\t',ps_solosi,'\t\t',(ps_factor*ps_solosi),'\n')
+cat('No esperando un si\t\t',ps_nocsi,'\t\t',(ps_factor*ps_nocsi),'\n')
+
+
+# calcula la presicion negativa del no
+cat('\n\n');
+cat('Presición Negativa del No\tValor\t\t%\n')
+
+pn_totalno <- (mc[1,1]+mc[1,2])
+pn_solono  <- mc[1,1]
+pn_sicno   <- mc[1,2]
+pn_factor  <- 100/pn_totalno
+
+cat('Observaciones\t\t\t',pn_totalno,'\t\t',100,'\n')
+cat('No esperando un no\t\t',pn_solono,'\t\t',(pn_factor*pn_solono),'\n')
+cat('Si esperando un no\t\t',pn_sicno,'\t\t',(pn_factor*pn_sicno),'\n')
+
+# calcula el error de clasificación
+error_clasificacion <- mean(predicho != real)
+cat("El error del modelo es de:", error_clasificacion * 100, "%\n")
+
+```
+### Otra forma de presentar la matriz de confusión
+```{r }
+library(caret)
+
+real <- as.factor(datatest$survived)
+predicho <- as.factor(ifelse(datatest$posiMorir >= 0.5, 1, 0))
+
+confusionMatrix(predicho, real)
+```
+
+### Graficando la matriz de confusión
+```{r}
+# transforma la matriz de confusión a un dataframe
+df_mc <- as.data.frame(as.table(mc))
+colnames(df_mc) <- c("Real", "Predicho", "Frecuencia")
+
+# define las etiquetas que mostrara la gráfica
+df_mc$Real <- ifelse(df_mc$Real == 0, "Murió (Real)", "Sobrevivió (Real)")
+df_mc$Predicho <- ifelse(df_mc$Predicho == FALSE, "Murió (Pred)", "Sobrevivió (Pred)")
+
+# crea la gráfica
+ggplot(df_mc, aes(x = Predicho, y = Real, fill = Frecuencia)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = Frecuencia), vjust = 1, size = 8, color = "white") +
+  scale_fill_gradient(low = "#5D6D7E", high = "#2ECC71") +
+  labs(title = "Matriz de Confusión: Aciertos vs Errores",
+       subtitle = "Basado en el modelo GLM - Titanic",
+       x = "Predicción del Modelo",
+       y = "Realidad Histórica") +
+  theme_minimal()
+
+```
+
+### Resultados.
+A pesar de que el modelo ingenuo es considerado como un modelo de baja precisión, este demuestra que si es posible determinar si un pasajero
+puede sobrevivir o no al hundimiento del RMS Titanic
